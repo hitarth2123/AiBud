@@ -16,6 +16,17 @@ const logApiProxy = (proxy) => {
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-three': ['three'],
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -32,6 +43,9 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    strictPort: true,
+    host: true,
+    allowedHosts: ['aibuddy-2.onrender.com', 'frontukanaam.onrender.com'],
     proxy: {
       '/api': { target: 'http://localhost:5012', changeOrigin: true, configure: logApiProxy },
     },

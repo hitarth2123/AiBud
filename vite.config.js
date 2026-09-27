@@ -32,6 +32,8 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    host: true,
+    allowedHosts: ['frontukanaam.onrender.com'],
     proxy: {
       '/api': { target: 'http://localhost:5012', changeOrigin: true, configure: logApiProxy },
     },
