@@ -1,7 +1,7 @@
 const ForumPost = require('../models/ForumPost');
 const Grievance = require('../models/Grievance');
 const User = require('../models/User');
-const { sendMail } = require('./mailer.service');
+const { sendGrievanceEscalation } = require('./mailer.service');
 const { logAction } = require('./audit.service');
 
 const buildScope = (req) => {
@@ -12,6 +12,11 @@ const buildScope = (req) => {
 const visibleFilter = (req) => ({
   ...buildScope(req),
   is_hidden: req.user?.role === 'student' ? false : { $in: [false, true] },
+  $or: [
+    { visibility: { $ne: 'private' } },
+    { author: req.user.id || req.user._id },
+    ...( ['faculty', 'hod'].includes(req.user.role) ? [{ visibility: 'private' }] : []),
+  ],
 });
 
 const listPosts = async (req) => {
@@ -35,7 +40,12 @@ const listPosts = async (req) => {
 };
 
 const createPost = async (req) => {
-  const { type, title, body, tags, subject, is_anonymous } = req.body;
+  const { type, title, body, tags, subject, is_anonymous, visibility = 'public' } = req.body;
+  if (!['public', 'private'].includes(visibility)) {
+    const error = new Error('Visibility must be public or private.');
+    error.statusCode = 400;
+    throw error;
+  }
   if (type === 'announcement' && !['faculty', 'hod'].includes(req.user.role)) {
     const error = new Error('Only faculty and HOD users can create announcements.');
     error.statusCode = 403;
@@ -47,6 +57,7 @@ const createPost = async (req) => {
     type,
     title,
     body,
+    visibility,
     tags,
     subject,
     is_anonymous: Boolean(is_anonymous),
@@ -78,6 +89,7 @@ const replyToPost = async (req) => {
     body: req.body.body,
     parent_post: parent._id,
     subject: parent.subject,
+    visibility: parent.visibility,
   });
   return ForumPost.findById(reply._id).populate('author', 'name role department').lean();
 };
@@ -110,7 +122,11 @@ const flagGrievance = async (req) => {
     ...recipients.map((recipient) => recipient.email),
   ])].filter(Boolean).join(',');
   if (addresses) {
-    await sendMail(addresses, `Grievance ${grievance.reference_number}`, `<p>New grievance: <strong>${grievance.reference_number}</strong></p><p>${grievance.description}</p>`, `New grievance ${grievance.reference_number}: ${grievance.description}`);
+    await sendGrievanceEscalation(addresses, {
+      REFERENCE_NUMBER: grievance.reference_number,
+      DEPARTMENT: grievance.department,
+      DESCRIPTION: grievance.description,
+    });
   }
   await logAction({
     actor: req.user.id || req.user._id,

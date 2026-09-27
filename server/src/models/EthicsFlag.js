@@ -64,6 +64,10 @@ const ethicsFlagSchema = new Schema(
       type: Date,
       default: null,
     },
+    hod_notification_job_id: {
+      type: String,
+      default: null,
+    },
     hod_notified_by: {
       type: String,
       enum: {
@@ -79,6 +83,11 @@ const ethicsFlagSchema = new Schema(
         message: 'resolution_status must be open, under_review, resolved, or escalated',
       },
       default: 'open',
+    },
+    hod_review_status: {
+      type: String,
+      enum: ['pending', 'reviewed', 'false_positive', 'escalated'],
+      default: 'pending',
     },
     resolved_by: {
       type: Schema.Types.ObjectId,

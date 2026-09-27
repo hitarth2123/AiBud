@@ -21,6 +21,10 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
+    institution_id: {
+      type: String,
+      trim: true,
+    },
     password_hash: {
       type: String,
       required: [true, 'password_hash is required'],
@@ -38,6 +42,11 @@ const userSchema = new Schema(
       required: [true, 'department is required'],
       trim: true,
     },
+    course: {
+      type: String,
+      default: 'B.Tech',
+      trim: true,
+    },
     // Student-specific fields
     enrolled_subjects: {
       type: [String],
@@ -51,6 +60,11 @@ const userSchema = new Schema(
       type: Number,
       min: 1,
       max: 8,
+    },
+    specialization: {
+      type: String,
+      default: 'Common Core',
+      trim: true,
     },
     // Faculty / HOD specific
     subject_expertise: {
@@ -71,6 +85,15 @@ const userSchema = new Schema(
     is_active: {
       type: Boolean,
       default: true,
+    },
+    token_version: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    email_unsubscribed: {
+      type: Boolean,
+      default: false,
     },
     feedback_due: {
       type: Boolean,

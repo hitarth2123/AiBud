@@ -22,6 +22,7 @@ const llmRoutes           = require('./src/routes/llm.routes');
 const safetyRoutes        = require('./src/routes/safety.routes');
 const lockoutRoutes       = require('./src/routes/lockout.routes');
 const hallucinationRoutes = require('./src/routes/hallucination.routes');
+const aiAvailabilityRoutes = require('./src/routes/aiAvailability.routes');
 
 const app = express();
 
@@ -57,8 +58,27 @@ app.use('/api/llm',           llmRoutes);
 app.use('/api/safety',        safetyRoutes);
 app.use('/api/lockout',       lockoutRoutes);
 app.use('/api/hallucination', hallucinationRoutes);
+app.use('/api/ai-availability', aiAvailabilityRoutes);
 
-// ── 404 Handler ───────────────────────────────────────────────────────────────
+// ── Serve Client Build in Production ─────────────────────────────────────────
+const path = require('path');
+const clientDistPath = path.join(__dirname, '..', 'client', 'dist');
+
+if (env.NODE_ENV === 'production') {
+  // Serve static assets from the client build
+  app.use(express.static(clientDistPath));
+
+  // SPA fallback — serve index.html for any non-API route
+  app.get('*', (_req, res, next) => {
+    // Don't intercept API routes
+    if (_req.originalUrl.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
+// ── 404 Handler (API routes only) ─────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 
 // ── Global Error Handler ──────────────────────────────────────────────────────

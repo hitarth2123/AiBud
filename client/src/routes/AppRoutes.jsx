@@ -26,25 +26,33 @@ import SessionDetails     from '@pages/student/session-details';
 import Forum              from '@pages/student/forum';
 import ReportHallucination from '@pages/student/report-hallucination';
 import Emergency          from '@pages/student/emergency';
+import Settings           from '@pages/student/settings';
+import AiAvailabilityGate from '@components/shared/AiAvailabilityGate';
 
 // Faculty pages
 import FacultyDashboard  from '@pages/faculty/dashboard';
 import Availability      from '@pages/faculty/availability';
 import SessionRequests   from '@pages/faculty/session-requests';
 import FacultyMySessions from '@pages/faculty/my-sessions';
+import ProfileChangeRequests from '@pages/faculty/profile-change-requests';
 
 // HOD pages
 import HODDashboard  from '@pages/hod/dashboard';
 import AuditLog      from '@pages/hod/audit-log';
 import EthicsConfig  from '@pages/hod/ethics-config';
 import FacultyMgmt   from '@pages/hod/faculty-mgmt';
+import HODProfileChangeRequests from '@pages/hod/profile-change-requests';
 
 // Admin pages
 import AdminDashboard     from '@pages/admin/dashboard';
+import StudentActivity    from '@pages/admin/student-activity';
 import Users              from '@pages/admin/users';
 import Timetable          from '@pages/admin/timetable';
 import EmergencyContacts  from '@pages/admin/emergency-contacts';
 import AdminFeedback      from '@pages/admin/feedback';
+import AdminProfileChangeRequests from '@pages/admin/profile-change-requests';
+import AdminAuditLog      from '@pages/admin/audit-log';
+import AccountSettings    from '@pages/shared/account-settings';
 
 const PrivateRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -59,26 +67,26 @@ const AppRoutes = () => (
     {/* Public */}
     <Route path="/login"        element={<Login />} />
     <Route path="/unauthorized" element={<Unauthorized />} />
+    <Route path="/student/emergency" element={<Emergency />} />
 
     {/* Student */}
     <Route path="/student" element={<PrivateRoute allowedRoles={['student']}><DashboardLayout /></PrivateRoute>}>
       <Route index                element={<StudentDashboard />} />
       <Route path="dashboard"     element={<StudentDashboard />} />
-      <Route path="learning-path" element={<LearningPath />} />
+      <Route path="learning-path" element={<AiAvailabilityGate feature="learning_path"><LearningPath /></AiAvailabilityGate>} />
       <Route path="learning-path/topic" element={<TopicStudy />} />
-      <Route path="question-bank" element={<QuestionBank />} />
+      <Route path="question-bank" element={<AiAvailabilityGate feature="question_bank"><QuestionBank /></AiAvailabilityGate>} />
       <Route path="question-bank/paper" element={<QuestionPaper />} />
-      <Route path="practice-mcq" element={<PracticeMCQ />} />
-      <Route path="mock-test"     element={<MockTest />} />
+      <Route path="practice-mcq" element={<AiAvailabilityGate feature="practice_mcq"><PracticeMCQ /></AiAvailabilityGate>} />
+      <Route path="mock-test"     element={<AiAvailabilityGate feature="mock_test"><MockTest /></AiAvailabilityGate>} />
       <Route path="mock-test/:id/results" element={<MockTestResults />} />
       <Route path="ai-tutor"      element={<AITutor />} />
-      <Route path="videos"        element={<Videos />} />
-      <Route path="book-session"  element={<BookSession />} />
+      <Route path="book-session"  element={<AiAvailabilityGate feature="booking_session"><BookSession /></AiAvailabilityGate>} />
       <Route path="my-sessions"   element={<MySessions />} />
       <Route path="my-sessions/:id" element={<SessionDetails />} />
       <Route path="forum"         element={<Forum />} />
       <Route path="report-hallucination" element={<ReportHallucination />} />
-      <Route path="emergency"     element={<Emergency />} />
+      <Route path="settings" element={<Settings />} />
     </Route>
 
     {/* Faculty */}
@@ -87,7 +95,9 @@ const AppRoutes = () => (
       <Route path="dashboard"       element={<FacultyDashboard />} />
       <Route path="availability"    element={<Availability />} />
       <Route path="session-requests" element={<SessionRequests />} />
+      <Route path="profile-change-requests" element={<ProfileChangeRequests />} />
       <Route path="my-sessions"     element={<FacultyMySessions />} />
+      <Route path="settings"        element={<AccountSettings />} />
     </Route>
 
     {/* HOD */}
@@ -97,16 +107,22 @@ const AppRoutes = () => (
       <Route path="audit-log"    element={<AuditLog />} />
       <Route path="ethics-config" element={<EthicsConfig />} />
       <Route path="faculty"      element={<FacultyMgmt />} />
+      <Route path="profile-change-requests" element={<HODProfileChangeRequests />} />
+      <Route path="settings"        element={<AccountSettings />} />
     </Route>
 
     {/* Admin */}
     <Route path="/admin" element={<PrivateRoute allowedRoles={['admin']}><DashboardLayout /></PrivateRoute>}>
       <Route index                    element={<AdminDashboard />} />
       <Route path="dashboard"         element={<AdminDashboard />} />
+      <Route path="student-activity"  element={<StudentActivity />} />
+      <Route path="audit-log"          element={<AdminAuditLog />} />
       <Route path="users"             element={<Users />} />
       <Route path="timetable"         element={<Timetable />} />
       <Route path="emergency-contacts" element={<EmergencyContacts />} />
       <Route path="feedback"          element={<AdminFeedback />} />
+      <Route path="profile-change-requests" element={<AdminProfileChangeRequests />} />
+      <Route path="settings"         element={<AccountSettings />} />
     </Route>
 
     {/* Fallback */}

@@ -4,13 +4,14 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Session = require('../models/Session');
 const AppError = require('../utils/AppError');
+const { curriculum } = require('../constants/curriculum');
 
 const blacklistedTokens = new Map();
 
 const getConfig = () => ({
   jwtSecret: process.env.JWT_SECRET,
   refreshSecret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-  accessExpiresIn: process.env.JWT_EXPIRES_IN,
+  accessExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
   refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 });
 
@@ -34,8 +35,11 @@ const claimUser = (user) => ({
   userId: String(user._id || user.id || user.userId),
   role: user.role,
   dept: user.dept || user.department,
+  course: user.course || curriculum.course,
   semester: user.semester ?? null,
+  specialization: user.specialization || 'Common Core',
   enrolled_subjects: user.enrolled_subjects || user.subjects || [],
+  token_version: user.token_version || 0,
 });
 
 const signAccessToken = (user, options = {}) => {
@@ -123,8 +127,7 @@ const exchangeSsoCode = async (code) => {
 const getSsoProfile = async (req) => {
   const devEmail = req.body?.devEmail;
   const devPassword = req.body?.devPassword;
-  const devLoginEnabled = process.env.NODE_ENV !== 'production'
-    && process.env.DEV_LOGIN_ENABLED !== 'false';
+  const devLoginEnabled = process.env.DEV_LOGIN_ENABLED !== 'false';
   if (devEmail && devLoginEnabled) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(devEmail.trim())) {
       throw new AppError('Please enter a valid email address.', 400);
@@ -134,7 +137,9 @@ const getSsoProfile = async (req) => {
       name: devEmail.split('@')[0],
       role: 'student',
       department: 'Computer Science',
+      course: curriculum.course,
       semester: 5,
+      specialization: 'Common Core',
       enrolled_subjects: [],
       devPassword,
     };
@@ -163,14 +168,21 @@ const login = async (req, res) => {
       password_hash: await bcrypt.hash(crypto.randomUUID(), 10),
       role: profile.role || 'student',
       department: profile.dept || profile.department || 'Unassigned',
+      course: profile.course || curriculum.course,
       semester: profile.semester,
+      specialization: profile.specialization || 'Common Core',
       enrolled_subjects: profile.enrolled_subjects || profile.subjects || [],
     });
   }
   if (user.is_active === false) throw new AppError('Account is deactivated.', 403);
 
+  let profileUpdated = false;
+  if (!user.course) { user.course = profile.course || curriculum.course; profileUpdated = true; }
+  if (!user.specialization) { user.specialization = profile.specialization || 'Common Core'; profileUpdated = true; }
+
   const tokens = await issueTokens(user, req);
   user.last_login = new Date();
+  if (profileUpdated && typeof user.markModified === 'function') user.markModified('course');
   if (typeof user.save === 'function') await user.save();
 
   return res.status(200).json({
@@ -235,6 +247,28 @@ const refresh = async (req, res) => {
   });
 };
 
+const unsubscribeEmail = async (req, res) => {
+  let userId = req.user?.id;
+  if (!userId && req.query.token) {
+    try {
+      const decoded = jwt.verify(req.query.token, getConfig().jwtSecret);
+      if (decoded.type !== 'email-unsubscribe') throw new Error('Invalid unsubscribe token');
+      userId = decoded.userId;
+    } catch {
+      throw new AppError('Invalid unsubscribe link.', 400);
+    }
+  }
+  if (!userId) throw new AppError('Authentication required.', 401);
+  await User.findByIdAndUpdate(userId, { $set: { email_unsubscribed: true } });
+  return res.json({ success: true, message: 'Email reminders unsubscribed.' });
+};
+
+const createUnsubscribeToken = (user) => jwt.sign(
+  { userId: String(user._id), type: 'email-unsubscribe' },
+  getConfig().jwtSecret,
+  { expiresIn: '1y' },
+);
+
 module.exports = {
   login,
   logout,
@@ -245,4 +279,6 @@ module.exports = {
   issueTokens,
   blacklistToken,
   isTokenBlacklisted,
+  unsubscribeEmail,
+  createUnsubscribeToken,
 };

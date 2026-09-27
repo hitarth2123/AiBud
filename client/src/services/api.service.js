@@ -5,8 +5,19 @@
 import axios from 'axios';
 import clientLogger from '@utils/clientLogger';
 
+const getApiBaseUrl = () => {
+  if (import.meta.env.DEV) return '/api';
+  let url = import.meta.env.VITE_API_URL || '/api';
+  if (url !== '/api' && !url.endsWith('/api')) {
+    url = url.replace(/\/$/, '') + '/api';
+  }
+  return url;
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
 const api = axios.create({
-  baseURL: import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL || '/api'),
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -101,7 +112,7 @@ api.interceptors.response.use(
       const refreshToken = user?.refreshToken;
 
       try {
-        const refreshEndpoint = import.meta.env.DEV ? '/api/auth/refresh' : ((import.meta.env.VITE_API_URL || '/api') + '/auth/refresh');
+        const refreshEndpoint = `${API_BASE_URL}/auth/refresh`;
         const { data } = await axios.post(refreshEndpoint, { refreshToken }, { withCredentials: true });
         const resData = data.data || data;
         const newAccessToken = resData?.accessToken;
@@ -152,7 +163,11 @@ export const authService = {
 };
 
 export const studentService = {
+  getProfile:       ()    => api.get('/student/profile').then(r => r.data),
+  getProfileChangeRequests: () => api.get('/student/profile-change-requests').then(r => r.data),
+  createProfileChangeRequest: (data) => api.post('/student/profile-change-requests', data).then(r => r.data),
   getDashboard:    ()    => api.get('/student/dashboard').then(r => r.data),
+  getCurriculum:   ()    => api.get('/student/curriculum').then(r => r.data),
   getSubjects:     ()    => api.get('/student/subjects').then(r => r.data),
   getLearningPath: (params) => api.get('/student/learning-path', { params }).then(r => r.data),
   completeLearningPathTopic: (data) => api.patch('/student/learning-path/topic', data).then(r => r.data),
@@ -160,6 +175,8 @@ export const studentService = {
   getQuestionSets: (params) => api.get('/student/question-bank/sets', { params }).then(r => r.data),
   toggleBookmark:  (id)  => api.post(`/student/question-bank/${id}/bookmark`).then(r => r.data),
   getMockTestHistory: () => api.get('/student/mock-tests').then(r => r.data),
+  getPracticeAttempts: () => api.get('/student/practice-attempts').then(r => r.data),
+  savePracticeAttempt: (data) => api.post('/student/practice-attempts', data).then(r => r.data),
   getMockTestResults: (id) => api.get(`/student/mock-test/${id}/results`).then(r => r.data),
   bookSession:     (data) => api.post('/student/sessions/book', data).then(r => r.data),
   getSessions:     ()    => api.get('/student/sessions').then(r => r.data),
@@ -174,11 +191,51 @@ export const facultyService = {
   getRequests:      () => api.get('/faculty/session-requests').then(r => r.data),
   updateRequest:    (id, data) => api.put(`/faculty/session-requests/${id}`, data).then(r => r.data),
   getSessions:      () => api.get('/faculty/sessions').then(r => r.data),
+  getProfileChangeRequests: () => api.get('/faculty/profile-change-requests').then(r => r.data),
+  createProfileChangeRequest: (data) => api.post('/faculty/profile-change-requests', data).then(r => r.data),
+  reviewProfileChangeRequest: (id, data) => api.patch(`/faculty/profile-change-requests/${id}`, data).then(r => r.data),
+};
+
+export const hierarchyService = {
+  getHodProfileRequests: (params) => api.get('/hod/profile-change-requests', { params }).then(r => r.data),
+  createHodProfileRequest: (data) => api.post('/hod/profile-change-requests', data).then(r => r.data),
+  reviewHodProfileRequest: (id, data) => api.patch(`/hod/profile-change-requests/${id}`, data).then(r => r.data),
+  getAdminProfileRequests: () => api.get('/admin/profile-change-requests').then(r => r.data),
+  reviewAdminProfileRequest: (id, data) => api.patch(`/admin/profile-change-requests/${id}`, data).then(r => r.data),
 };
 
 export const adminService = {
+  getDashboard:    (params) => api.get('/admin/dashboard', { params }).then(r => r.data),
+  getStudentActivity: (params) => api.get('/admin/student-activity', { params }).then(r => r.data),
+  getAuditLog:     (params) => api.get('/admin/audit-log', { params }).then(r => r.data),
+  getUsers:        (params) => api.get('/admin/users', { params }).then(r => r.data),
+  createUser:      (data) => api.post('/admin/users', data).then(r => r.data),
+  bulkImportUsers: (data) => api.post('/admin/users/bulk-import', data).then(r => r.data),
+  updateUser:      (id, data) => api.put(`/admin/users/${id}`, data).then(r => r.data),
+  resetUserPassword: (id) => api.post(`/admin/users/${id}/password-reset`).then(r => r.data),
+  deactivateUser:  (id) => api.delete(`/admin/users/${id}`).then(r => r.data),
   getTimetable:    () => api.get('/admin/timetable').then(r => r.data),
   uploadTimetable: (data) => api.post('/admin/timetable/upload', data).then(r => r.data),
+  unlockTimetable: (studentId, subject, data) => api.post(`/admin/timetable/unlock/${encodeURIComponent(studentId)}/${encodeURIComponent(subject)}`, data).then(r => r.data),
+};
+
+export const aiAvailabilityService = {
+  get: () => api.get('/ai-availability').then(r => r.data),
+  update: (data) => api.put('/ai-availability', data).then(r => r.data),
+};
+
+export const safetyService = {
+  getAlerts: () => api.get('/safety/alerts').then(r => r.data),
+  getEmergencyContacts: () => api.get('/safety/emergency-contacts').then(r => r.data),
+  confirmDistress: (data) => api.post('/safety/distress', { ...data, confirmed: true }).then(r => r.data),
+};
+
+export const hodService = {
+  getDashboard: () => api.get('/hod/dashboard').then(r => r.data),
+  getAuditLog: (params) => api.get('/hod/audit-log', { params }).then(r => r.data),
+  auditAction: (id, action) => api.put(`/hod/audit-log/${id}/actions`, { action }).then(r => r.data),
+  getEthicsConfig: () => api.get('/hod/ethics-config').then(r => r.data),
+  updateEthicsConfig: (data) => api.put('/hod/ethics-config', data).then(r => r.data),
 };
 
 export const mockTestService = {
@@ -188,11 +245,13 @@ export const mockTestService = {
 
 export const learningPathService = {
   generate: (data) => api.post('/llm/learning-path/generate', data).then(r => r.data),
+  generateTopic: (data) => api.post('/llm/learning-path/topic/generate', data).then(r => r.data),
 };
 
 export const llmService = {
   chat:     (data) => api.post('/llm/chat', data).then(r => r.data),
   generateMcq: (data) => api.post('/llm/mcq/generate', data).then(r => r.data),
+  generateQuestionSets: (data) => api.post('/llm/question-bank/generate-sets', data).then(r => r.data),
   summarise:(data) => api.post('/llm/summarise', data).then(r => r.data),
   explain:  (data) => api.post('/llm/explain', data).then(r => r.data),
 };
