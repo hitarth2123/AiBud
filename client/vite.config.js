@@ -45,7 +45,7 @@ export default defineConfig({
     port: 3000,
     strictPort: true,
     host: true,
-    allowedHosts: ['aibuddy-2.onrender.com'],
+    allowedHosts: ['aibuddy-2.onrender.com', 'frontukanaam.onrender.com'],
     proxy: {
       '/api': { target: 'http://localhost:5012', changeOrigin: true, configure: logApiProxy },
     },
